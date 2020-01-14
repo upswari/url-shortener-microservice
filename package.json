@@ -1,0 +1,29 @@
+{
+  "name": "url-shortener-microservice",
+  "version": "0.0.1",
+  "description": "APIs and Microservices Projects - URL Shortener Microservice",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upswari/url-shortener-microservice.git"
+  },
+  "keywords": [
+    "microservice"
+  ],
+  "author": "aswari",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/upswari/url-shortener-microservice/issues"
+  },
+  "homepage": "https://github.com/upswari/url-shortener-microservice#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
