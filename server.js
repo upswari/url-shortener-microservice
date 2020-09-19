@@ -1,68 +1,97 @@
-const express = require('express'),
-    app = express(),
-    bodyParser = require('body-parser'),
-    dns = require('dns')
+const express = require("express");
+const bodyParser = require("body-parser");
+const dns = require("dns");
 
+const app = express();
+const port = process.env.PORT || 3000;
 
-app.use(bodyParser.urlencoded({ extended: true }))
-app.use(express.static('./public'))
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("./public"));
 
-app.get('/', (req, res) => {
-    res.render('index.html')
+storage = {
+  original_url: "",
+  short_url: 0,
+};
 
-})
+function logger(req, res, next) {
+  console.log(`
+    url : ${req.body.f_url}
+    protocol : ${req._protocol}, valid: ${req.isValidProtocol}
+    hostname : ${req._hostname}, valid: ${req.isValidHostname}
+  `);
 
-app.post('/api/shorturl/new', (req, res, next) => {
-    let url = req.body.f_url,
-        hostname = ''
-
-    req.data = { "error": "" }
-
-    if (!isValidProtocol(url)) {
-        req.data.error = "Invalid URL"
-        next()
-    }
-
-    hostname = getHostname(url)
-    if (!hostname) {
-        req.data.error = "Invalid Hostname"
-        next()
-    }
-    req.data //next do the url shortener
-    next()
-
-}, (req, res) => {
-    res.json(req.data)
-
-})
-
-function isValidProtocol(url) {
-    let t = ['http://', 'https://'],
-        ret = t.filter(x => url.match(x))
-    if (ret.length > 0) {
-        return true
-    }
-    return false
+  next();
 }
 
-async function isValidHostname(host) {
-    const val = await dns.lookup(host, (err, addr) => {
-        if (err) {
-            return err
-        } return addr
-    })
-    return val
+function getRandomInt() {
+  return Math.floor(Math.random() * Math.floor(100));
 }
 
-function getHostname(url) {
-    let u = url.split('/').filter(x => x.includes('.'))
-    if (u.length > 0) {
-        if (isValidHostname(u.toString())) {
-            return true
-        }
-        return false
-    }
-    return false
+function getProtocolAndHostname(req, res, next) {
+  req._protocol = req.body.f_url.split("://")[0];
+  req._hostname = req.body.f_url.split("://")[1];
+
+  next();
 }
 
-app.listen(process.env.PORT || 3000, () => console.log('Running..!'))
+function validateProtocol(req, res, next) {
+  const validProtocol = ["http", "https"];
+
+  req.isValidProtocol =
+    validProtocol.filter((item) => item == req._protocol).length > 0
+      ? true
+      : false;
+
+  next();
+}
+
+function validateHostname(req, res, next) {
+  req.isValidHostname = false;
+
+  if (req._hostname != undefined) {
+    dns.lookup(req._hostname, (err) => {
+      if (err) {
+        next();
+      } else {
+        req.isValidHostname = true;
+        next();
+      }
+    });
+  } else {
+    next();
+  }
+}
+
+function shortURL(req, res) {
+  if (req.isValidProtocol && req.isValidHostname) {
+    storage.original_url = req.body.f_url;
+    storage.short_url = getRandomInt();
+
+    res.json(storage);
+  } else {
+    res.json({ error: "Invalid URL" });
+  }
+}
+
+app.get("/", (req, res) => {
+  res.render("index.html");
+});
+
+app.post(
+  "/api/shorturl/new",
+  getProtocolAndHostname,
+  validateProtocol,
+  validateHostname,
+  // logger,
+  shortURL
+);
+
+app.get("/api/shorturl/:number", (req, res) => {
+  if (req.params.number == storage.short_url) {
+    res.redirect(storage.original_url);
+  }
+
+  res.end();
+});
+
+app.listen(port, () => console.log(`Running on port ${port}`));
